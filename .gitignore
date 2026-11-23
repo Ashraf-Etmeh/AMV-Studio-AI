@@ -1,0 +1,66 @@
+# Installed dependencies and generated frontend files
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+.sites-runtime/
+/.git-backups/
+
+# Python environments, bytecode, and test/tool caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Local settings and secrets (keep shareable examples)
+.env
+.env.*
+!.env.example
+!.env.*.example
+.vscode/
+.idea/
+
+# Local project data and generated AMV exports
+/data/
+/imports/
+/media/
+/outputs/
+/exports/
+/backend/data/
+/backend/outputs/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# User-owned audio and video files
+*.mp3
+*.wav
+*.flac
+*.m4a
+*.aac
+*.ogg
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.webm
+
+# Logs and operating-system clutter
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+Desktop.ini
