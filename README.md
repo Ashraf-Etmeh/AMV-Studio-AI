@@ -1,6 +1,6 @@
 # AMV Studio AI
 
-A local-first, AI-assisted Anime Music Video editor graduation project. The first four frontend milestones are implemented with React, TypeScript, and Vite.
+A local-first, AI-assisted Anime Music Video editor graduation project. The first five frontend milestones are implemented with React, TypeScript, and Vite.
 
 ## Run on Windows
 
@@ -26,12 +26,13 @@ Open the local URL printed by Vite, normally `http://127.0.0.1:5173/`. PowerShel
 - A separate **Your music** view plays imported audio while the file is available in the browser session. It displays real file details and makes no analysis claims. After reload, relink the file in Media to restore playback.
 - A Scene Library page based on the supplied reference, with five **demo scenes**, keyword search over hand-authored descriptions and tags, filters, sorting, selection, and favorites for the current visit. No semantic retrieval or scene extraction is implied.
 - A separate **Your videos** view lists and previews videos imported into the project. It shows real file details, explains relinking after reload, and reports that no scenes have been detected.
+- An AMV Planner prototype with **AI Director** and **AI Copilot** modes. Director previews and applies two hand-authored story arcs; Copilot replaces one sample visual beat at a time and can reset the draft. These changes remain in memory and do not modify imported media or create a timeline.
 
 The app uses browser `localStorage` for small metadata records and session object URLs for selected files. It stores no media bytes, credentials, or generated AI analysis. Clearing site data or using another browser removes the saved workspace. For durable project files and media access across launches, a later desktop and persistence milestone will be needed.
 
 The project reference samples have static illustrative titles, durations, and edited labels. They are not playable AMVs or AI output. New projects begin with no media or runtime.
 
-Real music analysis, scene indexing, semantic retrieval, AI Director/Copilot, timeline, rendering, FastAPI, SQLite, FFmpeg, and Electron remain future work. Controls for those capabilities explain their status.
+Real music analysis, scene indexing, semantic retrieval, AI-generated Director/Copilot recommendations, timeline editing, rendering, FastAPI, SQLite, FFmpeg, and Electron remain future work. Controls for those capabilities explain their status.
 
 ## Validation
 
@@ -41,23 +42,25 @@ npm.cmd run check
 npm.cmd run test:e2e
 ```
 
-`check` runs ESLint, Vitest interaction and repository tests, TypeScript checks, and a production build. `test:e2e` runs Playwright tests in installed Microsoft Edge by default. Browser tests cover dashboard layout, project persistence and deletion, media import, relinking, metadata, keyboard focus, Song Analysis and Scene Library interactions, demo-data boundaries, and responsive layout. Test screenshots are saved under `frontend/test-results/`.
+`check` runs ESLint, Vitest interaction and repository tests, TypeScript checks, and a production build. `test:e2e` runs Playwright tests in installed Microsoft Edge by default. Browser tests cover dashboard layout, project persistence and deletion, media import, relinking, metadata, keyboard focus, Song Analysis, Scene Library, and Planner interactions, demo-data boundaries, and responsive layout. Test screenshots are saved under `frontend/test-results/`.
 
-The original screenshots are preserved in `docs/design-references/`. Approved artwork-only crops live in `frontend/src/assets/demo/` and can be reproduced with the extraction scripts in `scripts/` on Windows. See [Dashboard milestone notes](docs/dashboard-milestone.md), [Milestone 2 notes](docs/milestone-two.md), [Milestone 3 notes](docs/milestone-three.md), and [Milestone 4 notes](docs/milestone-four.md) for architecture, asset provenance, and scope.
+The original screenshots are preserved in `docs/design-references/`. Approved artwork-only crops live in `frontend/src/assets/demo/` and can be reproduced with the extraction scripts in `scripts/` on Windows. See [Dashboard milestone notes](docs/dashboard-milestone.md), [Milestone 2 notes](docs/milestone-two.md), [Milestone 3 notes](docs/milestone-three.md), [Milestone 4 notes](docs/milestone-four.md), and [Milestone 5 notes](docs/milestone-five.md) for architecture, asset provenance, and scope.
 
 ## Code map
 
 | Location | Purpose |
 | --- | --- |
-| `frontend/src/app/App.tsx` | Selects Dashboard, Projects, project media, Song Analysis, or Scene Library routes. |
+| `frontend/src/app/App.tsx` | Selects Dashboard, Projects, project media, Song Analysis, Scene Library, or Planner routes. |
 | `frontend/src/pages/` | Page composition and workspace layouts. |
 | `frontend/src/features/dashboard/` | Reference-based Dashboard and shared sidebar. |
 | `frontend/src/features/projects/` | Project types, fixtures, dialogs, and loading hook. |
 | `frontend/src/features/media/` | Media metadata types and formatting. |
 | `frontend/src/features/song-analysis/` | Explicit sample analysis fixture and display helpers. |
 | `frontend/src/features/scenes/` | Explicit sample scene metadata and keyword/filter logic. |
+| `frontend/src/features/planner/` | Hand-authored story arcs, alternatives, and fixture checks. |
 | `frontend/src/pages/SongAnalysisPage.tsx` | Song Analysis layout, sample interactions, and local audio playback. |
 | `frontend/src/pages/SceneLibraryPage.tsx` | Scene Library layout, sample interactions, and local video preview. |
+| `frontend/src/pages/PlannerPage.tsx` | Director/Copilot sample storyboard interactions. |
 | `frontend/src/services/projectRepository.ts` | Project operations contract. |
 | `frontend/src/services/localWorkspaceRepository.ts` | Browser-local project and media metadata storage, relinking, and in-session preview URLs. |
 | `frontend/src/services/mediaMetadata.ts` | Reads supported image dimensions and audio/video duration from selected files. |

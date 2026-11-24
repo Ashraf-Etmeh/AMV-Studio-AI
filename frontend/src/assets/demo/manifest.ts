@@ -12,7 +12,8 @@ import sceneConfrontation from './scene-confrontation.png'
 import sceneSunset from './scene-sunset.png'
 import sceneReaching from './scene-reaching.png'
 import sceneReunion from './scene-reunion.png'
+import plannerPreview from './planner-preview.png'
 
 // All assets are approved artwork-only crops of the supplied local references.
 // Importing each file lets Vite validate and bundle the dependency.
-export const demoArt = { hero, sidebar, song, scenes, generate, sky, blossoms, summer, songPreview, sceneCrying, sceneConfrontation, sceneSunset, sceneReaching, sceneReunion }
+export const demoArt = { hero, sidebar, song, scenes, generate, sky, blossoms, summer, songPreview, sceneCrying, sceneConfrontation, sceneSunset, sceneReaching, sceneReunion, plannerPreview }
