@@ -3,6 +3,8 @@ import { validateProjectName } from '../features/projects/types'
 import type { Project } from '../features/projects/types'
 import { mediaKind } from '../features/media/types'
 import type { MediaAsset } from '../features/media/types'
+import { isTimelineClip } from '../features/timeline/editing'
+import type { TimelineClip } from '../features/timeline/editing'
 import { readMediaDetails } from './mediaMetadata'
 import type { ProjectRepository } from './projectRepository'
 
@@ -12,6 +14,7 @@ interface WorkspaceState {
   version: 1
   projects: Project[]
   media: MediaAsset[]
+  timelines: Record<string, TimelineClip[]>
 }
 
 export interface WorkspaceRepository extends ProjectRepository {
@@ -20,10 +23,17 @@ export interface WorkspaceRepository extends ProjectRepository {
   relinkMedia(id: string, file: File): Promise<MediaAsset>
   removeMedia(id: string): Promise<void>
   previewUrl(id: string): string | null
+  listTimeline(projectId: string): Promise<TimelineClip[]>
+  saveTimeline(projectId: string, clips: TimelineClip[]): Promise<TimelineClip[]>
 }
 
 function initialState(): WorkspaceState {
-  return { version: 1, projects: demoProjects.map((project) => ({ ...project })), media: [] }
+  return { version: 1, projects: demoProjects.map((project) => ({ ...project })), media: [], timelines: {} }
+}
+
+function isTimelineCollection(value: unknown): value is Record<string, TimelineClip[]> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value).every((clips) => Array.isArray(clips) && clips.every(isTimelineClip) && new Set(clips.map((clip) => clip.id)).size === clips.length)
 }
 
 function isProject(value: unknown): value is Project {
@@ -56,8 +66,9 @@ function loadState(storage: Storage): WorkspaceState {
     if (!parsed || typeof parsed !== 'object') throw new Error('Invalid workspace data')
     const state = parsed as Partial<WorkspaceState>
     if (state.version !== 1 || !Array.isArray(state.projects) || !Array.isArray(state.media) ||
-      !state.projects.every(isProject) || !state.media.every(isMedia)) throw new Error('Invalid workspace data')
-    return { version: 1, projects: state.projects, media: state.media }
+      !state.projects.every(isProject) || !state.media.every(isMedia) ||
+      (state.timelines !== undefined && !isTimelineCollection(state.timelines))) throw new Error('Invalid workspace data')
+    return { version: 1, projects: state.projects, media: state.media, timelines: state.timelines ?? {} }
   } catch {
     throw new Error('Saved workspace metadata could not be read. Your browser data was left untouched.')
   }
@@ -102,7 +113,7 @@ export function createLocalWorkspaceRepository(storage: Storage = window.localSt
       if (!project) throw new Error('This project is no longer available.')
       if (project.source === 'sample') throw new Error('Sample projects cannot be removed.')
       const removed = state.media.filter((item) => item.projectId === id)
-      commit({ ...state, projects: state.projects.filter((item) => item.id !== id), media: state.media.filter((item) => item.projectId !== id) })
+      commit({ ...state, projects: state.projects.filter((item) => item.id !== id), media: state.media.filter((item) => item.projectId !== id), timelines: Object.fromEntries(Object.entries(state.timelines).filter(([projectId]) => projectId !== id)) })
       removed.forEach((item) => { const url = urls.get(item.id); if (url) URL.revokeObjectURL(url); urls.delete(item.id) })
     },
     async listMedia(projectId) {
@@ -155,11 +166,33 @@ export function createLocalWorkspaceRepository(storage: Storage = window.localSt
     },
     async removeMedia(id) {
       if (!state.media.some((item) => item.id === id)) throw new Error('This media item is no longer available.')
-      commit({ ...state, media: state.media.filter((item) => item.id !== id) })
+      const timelines = Object.fromEntries(Object.entries(state.timelines).map(([projectId, clips]) => [projectId, clips.filter((clip) => clip.mediaId !== id)]))
+      commit({ ...state, media: state.media.filter((item) => item.id !== id), timelines })
       const url = urls.get(id)
       if (url) URL.revokeObjectURL(url)
       urls.delete(id)
     },
     previewUrl(id) { return urls.get(id) ?? null },
+    async listTimeline(projectId) {
+      if (!hasProject(projectId)) throw new Error('This project is no longer available.')
+      return (state.timelines[projectId] ?? []).map(copy)
+    },
+    async saveTimeline(projectId, clips) {
+      if (!hasProject(projectId)) throw new Error('This project is no longer available.')
+      if (!Array.isArray(clips) || clips.length > 500 || !clips.every(isTimelineClip) || new Set(clips.map((clip) => clip.id)).size !== clips.length) {
+        throw new Error('Timeline clip data is invalid.')
+      }
+      const projectMedia = new Map(state.media.filter((asset) => asset.projectId === projectId).map((asset) => [asset.id, asset]))
+      for (const clip of clips) {
+        const asset = projectMedia.get(clip.mediaId)
+        if (!asset || clip.track !== asset.kind || (asset.kind === 'image' && (clip.sourceIn !== 0 || clip.sourceOut < 0.5 || clip.sourceOut > 300)) ||
+          (asset.kind !== 'image' && (asset.durationSeconds === null || clip.sourceOut - clip.sourceIn < 0.1 || clip.sourceOut > asset.durationSeconds + 0.001))) {
+          throw new Error('A timeline clip no longer matches its project media.')
+        }
+      }
+      const saved = clips.map(copy)
+      commit({ ...state, timelines: { ...state.timelines, [projectId]: saved } })
+      return saved.map(copy)
+    },
   }
 }

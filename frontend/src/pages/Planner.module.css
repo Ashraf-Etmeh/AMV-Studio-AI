@@ -114,6 +114,7 @@
 .draftStatus button { display: flex; align-items: center; gap: 5px; padding: 5px 0; border: 0; background: none; color: #d5adf6; font-size: 11px; cursor: pointer; white-space: nowrap; }
 .draftStatus button:disabled { opacity: .45; cursor: default; }
 .footerBoundary { margin: 17px 0 0; color: #aaa4bc; font-size: 11px; line-height: 1.5; }
+.footerBoundary button { padding: 0; border: 0; background: none; color: #d0a1ff; font: inherit; cursor: pointer; text-decoration: underline; }
 .missing { max-width: 500px; margin: 13vh auto; text-align: center; }
 @media (max-width: 1480px) { .topContext, .topDivider { display: none; } .topbar nav button { min-width: 82px; padding-inline: 7px; } .layout { grid-template-columns: 224px minmax(0, 1fr); } .workGrid { grid-template-columns: minmax(0, 1fr) 325px; } .previewPanel { grid-template-columns: minmax(0, 50%) minmax(0, 50%); } .railHint { display: block; } }
 @media (max-width: 1160px) { .workGrid { grid-template-columns: minmax(0, 1fr); } .assistantPanel { max-width: none; } .planOptions { display: grid; grid-template-columns: 1fr 1fr; } .previewPanel { grid-template-columns: 53% 47%; } }

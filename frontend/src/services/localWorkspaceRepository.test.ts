@@ -77,4 +77,33 @@ describe('browser-local workspace repository', () => {
     await expect(repository.create('Unsaved')).rejects.toThrow('Browser storage could not save')
     expect(await repository.list()).toHaveLength(3)
   })
+
+  it('migrates older browser records and saves only valid timeline references', async () => {
+    const storage = new MemoryStorage()
+    const first = createLocalWorkspaceRepository(storage)
+    const project = await first.create('Cut one')
+    const original = JSON.parse(storage.getItem('amv-studio-ai:workspace:v1')!)
+    delete original.timelines
+    storage.setItem('amv-studio-ai:workspace:v1', JSON.stringify(original))
+    const repository = createLocalWorkspaceRepository(storage)
+    expect(await repository.listTimeline(project.id)).toEqual([])
+    const { imported } = await repository.importMedia(project.id, [new File(['pixels'], 'shot.png', { type: 'image/png' })])
+    const clip = { id: 'clip-1', mediaId: imported[0].id, track: 'image' as const, sourceIn: 0, sourceOut: 5 }
+    await repository.saveTimeline(project.id, [clip])
+    expect(await createLocalWorkspaceRepository(storage).listTimeline(project.id)).toEqual([clip])
+    await expect(repository.saveTimeline(project.id, [{ ...clip, mediaId: 'other' }])).rejects.toThrow('no longer matches')
+    expect(await repository.listTimeline(project.id)).toEqual([clip])
+    await repository.removeMedia(imported[0].id)
+    expect(await repository.listTimeline(project.id)).toEqual([])
+  })
+
+  it('removes a deleted project timeline with its media records', async () => {
+    const storage = new MemoryStorage()
+    const repository = createLocalWorkspaceRepository(storage)
+    const project = await repository.create('Temporary cut')
+    const { imported } = await repository.importMedia(project.id, [new File(['image'], 'frame.png', { type: 'image/png' })])
+    await repository.saveTimeline(project.id, [{ id: 'clip', mediaId: imported[0].id, track: 'image', sourceIn: 0, sourceOut: 5 }])
+    await repository.remove(project.id)
+    expect(JSON.parse(storage.getItem('amv-studio-ai:workspace:v1')!).timelines[project.id]).toBeUndefined()
+  })
 })

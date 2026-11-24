@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
-import { AlertCircle, ArrowLeft, AudioLines, Film, Image as ImageIcon, Layers3, Link2, Music2, Plus, Search, Sparkles, Trash2, UploadCloud } from 'lucide-react'
+import { AlertCircle, ArrowLeft, AudioLines, Clapperboard, Film, Image as ImageIcon, Layers3, Link2, Music2, Plus, Search, Sparkles, Trash2, UploadCloud } from 'lucide-react'
 import { Sidebar } from '../features/dashboard/Sidebar'
 import { FeatureDialog, ProjectNameDialog } from '../features/projects/ProjectDialogs'
 import type { FeatureKey } from '../features/projects/ProjectDialogs'
@@ -16,7 +16,7 @@ type Filter = 'all' | MediaKind
 
 const kindIcon = { audio: Music2, video: Film, image: ImageIcon }
 
-export function ProjectWorkspacePage({ projectId, repository, onHome, onProjects, onAnalysis, onScenes, onPlanner }: { projectId: string; repository: WorkspaceRepository; onHome: () => void; onProjects: () => void; onAnalysis: () => void; onScenes: () => void; onPlanner: () => void }) {
+export function ProjectWorkspacePage({ projectId, repository, onHome, onProjects, onAnalysis, onScenes, onPlanner, onTimeline }: { projectId: string; repository: WorkspaceRepository; onHome: () => void; onProjects: () => void; onAnalysis: () => void; onScenes: () => void; onPlanner: () => void; onTimeline: () => void }) {
   const [project, setProject] = useState<Project | null>(null)
   const [projectCount, setProjectCount] = useState(0)
   const [assets, setAssets] = useState<MediaAsset[]>([])
@@ -98,7 +98,7 @@ export function ProjectWorkspacePage({ projectId, repository, onHome, onProjects
       <main className={styles.main} id="workspace-main" tabIndex={-1} onDrop={drop} onDragOver={(event) => event.preventDefault()}>
         <div className={styles.topline}><button className={styles.back} onClick={onProjects}><ArrowLeft size={18} /> Projects</button><span className={styles.kicker}>LOCAL MEDIA WORKSPACE</span></div>
         {loading ? <p role="status">Opening project…</p> : !project ? <div className={styles.emptyState}><h1>Project unavailable</h1><p>{error ?? 'This project was not found in this browser.'}</p><Button onClick={onProjects}>Back to projects</Button></div> : <>
-          <header className={styles.pageHeader}><div><span className={styles.sampleBadge}>{project.source === 'sample' ? 'Reference sample' : 'Local project'}</span><h1>{project.name}</h1><p>Organize music, anime videos, and still images for your AMV.</p></div><div className={styles.headerActions}><Button onClick={() => setRenameOpen(true)}>Rename</Button><Button onClick={onAnalysis}><AudioLines size={20} /> Song Analysis</Button><Button onClick={onScenes}><Layers3 size={20} /> Scene Library</Button><Button onClick={onPlanner}><Sparkles size={20} /> AMV Planner</Button><Button variant="primary" onClick={() => importRef.current?.click()} disabled={busy}><Plus size={20} /> Add media</Button></div></header>
+          <header className={styles.pageHeader}><div><span className={styles.sampleBadge}>{project.source === 'sample' ? 'Reference sample' : 'Local project'}</span><h1>{project.name}</h1><p>Organize music, anime videos, and still images for your AMV.</p></div><div className={styles.headerActions}><Button onClick={() => setRenameOpen(true)}>Rename</Button><Button onClick={onAnalysis}><AudioLines size={20} /> Song Analysis</Button><Button onClick={onScenes}><Layers3 size={20} /> Scene Library</Button><Button onClick={onPlanner}><Sparkles size={20} /> AMV Planner</Button><Button onClick={onTimeline}><Clapperboard size={20} /> Timeline Editor</Button><Button variant="primary" onClick={() => importRef.current?.click()} disabled={busy}><Plus size={20} /> Add media</Button></div></header>
           <div className={styles.summaryStrip}><span><AudioLines size={20} /> {counts.audio} music</span><span><Film size={20} /> {counts.video} videos</span><span><ImageIcon size={20} /> {counts.image} images</span><span>{assets.length} media records</span></div>
           <p className={styles.storageNote}><Link2 size={18} /> Project names and file details are saved in this browser. Media files remain on your computer; relink them after a reload to preview again.</p>
           {error && <p className={styles.error} role="alert">{error}</p>}
