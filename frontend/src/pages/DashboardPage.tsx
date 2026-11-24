@@ -36,7 +36,7 @@ export function DashboardPage({ repository, onProjects, onOpenWorkspace }: { rep
       <main id="main-content" className={styles.main} tabIndex={-1}>
         <Hero onCreate={showCreate} onOpen={showProjects} />
         <div className={styles.content}>
-          <WorkflowCards onSelect={(feature) => feature === 'analyze' && onProjects ? onProjects() : showFeature(feature)} />
+          <WorkflowCards onSelect={(feature) => (feature === 'analyze' || feature === 'scenes') && onProjects ? onProjects() : showFeature(feature)} />
           <RecentProjects projects={projects} loading={loading} error={error} onCreate={showCreate} onViewAll={showProjects} onOpen={showProject} onRename={showRename} />
         </div>
       </main>

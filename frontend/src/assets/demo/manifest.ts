@@ -7,7 +7,12 @@ import sky from './project-sky.png'
 import blossoms from './project-blossoms.png'
 import summer from './project-summer.png'
 import songPreview from './song-preview.png'
+import sceneCrying from './scene-crying.png'
+import sceneConfrontation from './scene-confrontation.png'
+import sceneSunset from './scene-sunset.png'
+import sceneReaching from './scene-reaching.png'
+import sceneReunion from './scene-reunion.png'
 
-// All assets are approved crops of the supplied local Dashboard reference.
+// All assets are approved artwork-only crops of the supplied local references.
 // Importing each file lets Vite validate and bundle the dependency.
-export const demoArt = { hero, sidebar, song, scenes, generate, sky, blossoms, summer, songPreview }
+export const demoArt = { hero, sidebar, song, scenes, generate, sky, blossoms, summer, songPreview, sceneCrying, sceneConfrontation, sceneSunset, sceneReaching, sceneReunion }

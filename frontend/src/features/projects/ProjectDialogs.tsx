@@ -82,22 +82,22 @@ export function ProjectSummaryDialog({ project, onRename, onOpen, onClose }: { p
 export type FeatureKey = 'media' | 'songs' | 'settings' | 'analyze' | 'scenes' | 'generate'
 
 const features: Record<FeatureKey, { title: string; text: string; details: string[] }> = {
-  analyze: { title: 'Understand the music', text: 'Song analysis is coming in a later milestone.', details: ['Explore beats and song structure', 'Review lyrics and emotional changes', 'Use musical cues to guide your edit'] },
-  scenes: { title: 'Find the right moment', text: 'The scene library is coming in a later milestone.', details: ['Import and browse anime footage', 'Index scenes, actions, and emotions', 'Find moments that fit your story'] },
+  analyze: { title: 'Understand the music', text: 'A Song Analysis demo is available in each project. Real music inference is planned for a later milestone.', details: ['Explore beats and song structure', 'Review lyrics and emotional changes', 'Use musical cues to guide your edit'] },
+  scenes: { title: 'Find the right moment', text: 'A Scene Library demo is available in each project. Automatic scene indexing and matching are planned for later milestones.', details: ['Import and browse anime footage', 'Index scenes, actions, and emotions', 'Find moments that fit your story'] },
   generate: { title: 'Bring your story together', text: 'AMV generation is coming in a later milestone.', details: ['Plan a sequence with AI Director', 'Refine your edit with AI Copilot', 'Edit on a timeline and export your AMV'] },
   media: { title: 'Your media, in one place', text: 'Choose a project to add local media.', details: ['Organize anime footage and still images', 'Preview your locally selected files', 'Keep media records linked to your projects'] },
   songs: { title: 'Every story starts with a song', text: 'Choose a project to add local music.', details: ['Add music to your workspace', 'Preview supported local audio files', 'Connect a song to your AMV project'] },
   settings: { title: 'Make the studio yours', text: 'Workspace settings are coming in a later milestone.', details: ['Choose media and project locations', 'Configure processing preferences', 'Manage export defaults'] },
 }
 
-export function FeatureDialog({ feature, onClose }: { feature: FeatureKey; onClose: () => void }) {
+export function FeatureDialog({ feature, onClose, closeLabel = 'Back to Dashboard' }: { feature: FeatureKey; onClose: () => void; closeLabel?: string }) {
   const content = features[feature]
   return (
     <Modal title={content.title} description={content.text} onClose={onClose}>
       <div className={styles.featurePreview}><span className={styles.featureSymbol}>{feature === 'analyze' || feature === 'songs' ? <Music2 size={31} /> : <Sparkles size={31} />}</span><span>Planned capability</span></div>
       <ul className={styles.featureList}>{content.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
-      <p className={styles.boundary}>This Dashboard preview does not run AI analysis, process media, or generate videos.</p>
-      <div className={styles.actions}><Button variant="primary" onClick={onClose}>Back to Dashboard</Button></div>
+      <p className={styles.boundary}>This preview does not run AI analysis, process media, or generate videos.</p>
+      <div className={styles.actions}><Button variant="primary" onClick={onClose}>{closeLabel}</Button></div>
     </Modal>
   )
 }
