@@ -18,6 +18,9 @@
 .panelTitle h2 { margin: 0; font-size: 16px; }
 .panelTitle span { color: #aeadc6; font-size: 11px; }
 .panelTitle svg { color: #bd8df6; }
+.previewTabs { display: flex; gap: 3px; padding: 3px; border: 1px solid #756c8c61; border-radius: 7px; background: #111727; }
+.previewTabs button { padding: 4px 9px; border: 0; border-radius: 5px; background: none; color: #bbb5ce; font-size: 11px; cursor: pointer; }
+.previewTabs .previewTabActive { background: #64429a; color: white; }
 .panelHint { margin: 12px 13px; color: #b7b5c9; font-size: 11px; line-height: 1.45; }
 .assetList { display: flex; flex-direction: column; gap: 5px; max-height: 320px; overflow-y: auto; padding: 0 8px 8px; }
 .asset { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px; border: 1px solid #6c68863d; border-radius: 7px; background: #22283a; }
@@ -40,6 +43,12 @@
 .previewCaption { display: flex; justify-content: space-between; gap: 10px; padding: 12px 14px; border-top: 1px solid #81769939; font-size: 11px; }
 .previewCaption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .previewCaption span { color: #b4afc4; text-align: right; }
+.transport { display: flex; align-items: center; gap: 10px; min-height: 49px; padding: 8px 13px; border-top: 1px solid #81769939; }
+.playButton { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 0; border-radius: 7px; background: #8950de; color: white; cursor: pointer; }
+.playButton:disabled { opacity: .45; cursor: default; }
+.timecode { flex: none; color: #f0e8fb; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.transport input { min-width: 60px; flex: 1; accent-color: #ac68fb; }
+.transportHint { max-width: 180px; color: #aaa7bd; font-size: 10px; line-height: 1.35; text-align: right; }
 .inspectorBody { padding: 15px; }
 .clipKind { color: #7de4e9; font-size: 10px; font-weight: 800; letter-spacing: 1.3px; }
 .inspectorBody h3 { overflow: hidden; margin: 6px 0 17px; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
@@ -56,6 +65,17 @@
 .editActions button { flex: 1; padding-inline: 7px; white-space: nowrap; }
 .inspectorBody > button:last-child { width: 100%; justify-content: center; color: #f3b1c0; }
 .inspectorEmpty { padding: 16px; color: #b5b0c5; font-size: 12px; line-height: 1.5; }
+.readinessPanel { display: grid; grid-template-columns: minmax(200px, 285px) 1fr; gap: 18px; margin-top: 12px; padding: 15px; border: 1px solid #82729d50; border-radius: 11px; background: linear-gradient(120deg, #24203c, #151b2c 70%); }
+.readinessPanel h2 { margin: 4px 0; font-size: 16px; }
+.readinessPanel p { margin: 0; color: #bcb7cc; font-size: 11px; line-height: 1.45; }
+.readinessPanel ul { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
+.readinessPanel li { display: flex; align-items: flex-start; gap: 7px; min-width: 0; padding: 8px; border: 1px solid #77718b5c; border-radius: 7px; background: #20263a; }
+.readinessPanel li svg { flex: none; }
+.readinessPanel li span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.readinessPanel li strong { font-size: 11px; }
+.readinessPanel li small { color: #b9b5c9; font-size: 10px; line-height: 1.35; }
+.readinessPanel .checkPassed svg { color: #6ee4d8; }
+.readinessPanel .checkBlocked svg { color: #f0a6bd; }
 .timelinePanel { margin-top: 12px; }
 .timelineToolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 55px; padding: 8px 13px; border-bottom: 1px solid #8c7c9e43; }
 .timelineToolbar > div:first-child { display: flex; align-items: baseline; gap: 12px; }
@@ -71,6 +91,8 @@
 .rulerRow .trackLabel { height: 33px; color: #a6a2bb; font-size: 10px; letter-spacing: 1px; }
 .ruler { position: relative; flex: none; height: 33px; background: repeating-linear-gradient(90deg, #81709039 0 1px, transparent 1px 48px), #151b2a; }
 .ruler span { position: absolute; top: 8px; color: #b9b2c8; font-size: 10px; transform: translateX(5px); }
+.rulerPlayhead, .lanePlayhead { position: absolute; z-index: 2; top: 0; bottom: 0; width: 2px; background: #d39cff; box-shadow: 0 0 8px #bd80ff; pointer-events: none; }
+.rulerPlayhead::before { content: ''; position: absolute; top: 0; left: -5px; width: 12px; height: 9px; background: #d39cff; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .trackRow { border-top: 1px solid #8b7f9d30; }
 .trackRow .trackLabel { min-height: 76px; }
 .trackRow .trackLabel svg { color: #c39afb; flex: none; }
@@ -88,4 +110,7 @@
 .missing { max-width: 500px; margin: 13vh auto; text-align: center; }
 @media (max-width: 1300px) { .context { display: none; } .topbar nav button { padding-inline: 9px; } .workbench { grid-template-columns: 245px minmax(0, 1fr) 270px; } }
 @media (max-width: 1050px) { .topbar { flex-wrap: wrap; gap: 4px; padding-top: 8px; } .topbar nav { width: 100%; justify-content: space-between; margin: 0; } .topbar nav button { min-height: 40px; } .workbench { grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr); } .inspector { grid-column: 1 / -1; } .inspectorBody { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; } .inspectorBody form { grid-column: 2; grid-row: 1 / span 4; } .editActions { grid-column: 1; } .inspectorBody > button:last-child { grid-column: 1; } }
-@media (max-width: 660px) { .main { padding: 11px; } .brand { font-size: 15px; } .heading { align-items: flex-start; flex-direction: column; } .workbench { grid-template-columns: 1fr; } .previewStage { min-height: 240px; } .inspector { grid-column: auto; } .inspectorBody { display: block; } .timelineToolbar { align-items: flex-start; flex-direction: column; } .toolbarControls { width: 100%; flex-wrap: wrap; } .toolbarControls label { margin-left: auto; } .trackLabel { width: 125px; } .topbar nav button { font-size: 11px; padding-inline: 5px; } .previewCaption { flex-direction: column; } .previewCaption span { text-align: left; } }
+@media (max-width: 1200px) { .readinessPanel { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .readinessPanel ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 660px) { .main { padding: 11px; } .brand { font-size: 15px; } .heading { align-items: flex-start; flex-direction: column; } .workbench { grid-template-columns: 1fr; } .previewStage { min-height: 240px; } .inspector { grid-column: auto; } .inspectorBody { display: block; } .timelineToolbar { align-items: flex-start; flex-direction: column; } .toolbarControls { width: 100%; flex-wrap: wrap; } .toolbarControls label { margin-left: auto; } .trackLabel { width: 125px; } .topbar nav button { font-size: 11px; padding-inline: 5px; } .previewCaption { flex-direction: column; } .previewCaption span { text-align: left; } .transport { flex-wrap: wrap; } .transportHint { max-width: none; width: 100%; text-align: left; } }
+@media (max-width: 420px) { .readinessPanel ul { grid-template-columns: 1fr; } }

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 test('imported stills form a saved edit with trim, order, history, and relinking', async ({ page }) => {
@@ -82,5 +83,52 @@ test('imported music can be placed and trimmed without analysis claims', async (
   await page.reload()
   await expect(page.getByText('Placed length').locator('..')).toContainText('0:02')
   await expect(page.getByText('File needs relinking')).toBeVisible()
-  await expect(page.getByText(/gaps, transitions, synchronized playback, and export/)).toBeVisible()
+  await expect(page.getByText(/Rendering and file export are not implemented yet/)).toBeVisible()
+})
+
+test('sequence monitor plays ordered pictures with imported music and checks readiness', async ({ page }) => {
+  const samples = 16_000
+  const wav = Buffer.alloc(44 + samples * 2)
+  wav.write('RIFF', 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVE', 8)
+  wav.write('fmt ', 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20)
+  wav.writeUInt16LE(1, 22); wav.writeUInt32LE(8_000, 24); wav.writeUInt32LE(16_000, 28)
+  wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34)
+  wav.write('data', 36); wav.writeUInt32LE(samples * 2, 40)
+  const sky = path.resolve('src/assets/demo/project-sky.png')
+  const blossoms = path.resolve('src/assets/demo/project-blossoms.png')
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Projects', exact: true }).click()
+  await page.getByRole('button', { name: 'New Project', exact: true }).click()
+  await page.getByLabel('Project name').fill('Playable edit')
+  await page.getByRole('button', { name: 'Create Project' }).click()
+  await page.getByLabel('Choose media files').setInputFiles([{ name: 'project-sky.png', mimeType: 'image/png', buffer: await readFile(sky) }, { name: 'project-blossoms.png', mimeType: 'image/png', buffer: await readFile(blossoms) }, { name: 'score.wav', mimeType: 'audio/wav', buffer: wav }])
+  await page.getByRole('button', { name: 'Timeline Editor' }).click()
+  await page.getByRole('button', { name: 'Add project-sky.png to timeline' }).click()
+  await page.getByLabel('Duration (seconds)').fill('1')
+  await page.getByRole('button', { name: 'Apply trim' }).click()
+  await page.getByRole('button', { name: 'Add project-blossoms.png to timeline' }).click()
+  await page.getByLabel('Duration (seconds)').fill('1')
+  await page.getByRole('button', { name: 'Apply trim' }).click()
+  await page.getByRole('button', { name: 'Add score.wav to timeline' }).click()
+  await expect(page.getByText('The edit passes the available checks for a future renderer.')).toBeVisible()
+  await expect(page.getByText('Rendering and file export are not implemented yet.')).toBeVisible()
+  const monitor = page.getByRole('region', { name: 'Project preview' })
+  await expect(monitor.getByRole('img', { name: 'Preview of project-sky.png' })).toBeVisible()
+  await page.getByRole('slider', { name: 'Sequence position' }).fill('0.9')
+  await page.getByRole('button', { name: 'Play sequence' }).click()
+  await expect(monitor.getByRole('img', { name: 'Preview of project-blossoms.png' })).toBeVisible()
+  await expect.poll(() => monitor.locator('audio').evaluate((audio: HTMLAudioElement) => audio.currentTime)).toBeGreaterThan(1)
+  await page.getByRole('button', { name: 'Pause sequence' }).click()
+  await expect.poll(() => monitor.locator('audio').evaluate((audio: HTMLAudioElement) => audio.paused)).toBe(true)
+  await page.screenshot({ path: 'test-results/sequence-1672x941.png', fullPage: true })
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: `test-results/sequence-${viewport.width}x${viewport.height}.png`, fullPage: true })
+  }
+  await page.getByRole('button', { name: 'Source' }).click()
+  await expect(monitor.getByRole('heading', { name: 'Source preview' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Relink 3 source files in Media.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Play sequence' })).toBeDisabled()
 })

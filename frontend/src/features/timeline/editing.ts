@@ -54,7 +54,7 @@ export function moveTimelineClip(clips: TimelineClip[], id: string, direction: -
   const track = clips[index].track
   let adjacent = -1
   for (let itemIndex = index + direction; itemIndex >= 0 && itemIndex < clips.length; itemIndex += direction) {
-    if (clips[itemIndex].track === track) { adjacent = itemIndex; break }
+    if (sameSequence(clips[itemIndex].track, track)) { adjacent = itemIndex; break }
   }
   if (adjacent < 0) return clips
   const next = [...clips]
@@ -68,7 +68,7 @@ export function reorderTimelineClip(clips: TimelineClip[], id: string, targetId:
   if (id === targetId) return clips
   const dragged = clips.find((clip) => clip.id === id)
   const target = clips.find((clip) => clip.id === targetId)
-  if (!dragged || !target || dragged.track !== target.track) return clips
+  if (!dragged || !target || !sameSequence(dragged.track, target.track)) return clips
   const rest = clips.filter((clip) => clip.id !== id)
   const targetIndex = rest.findIndex((clip) => clip.id === targetId)
   rest.splice(targetIndex + (after ? 1 : 0), 0, dragged)
@@ -83,13 +83,17 @@ export function trackDuration(clips: TimelineClip[], track: TimelineTrack): numb
   return clips.filter((clip) => clip.track === track).reduce((total, clip) => total + clipDuration(clip), 0)
 }
 
+export function sameSequence(left: TimelineTrack, right: TimelineTrack): boolean {
+  return left === right || (left !== 'audio' && right !== 'audio')
+}
+
 export function clipStart(clips: TimelineClip[], id: string): number {
   const target = clips.find((clip) => clip.id === id)
   if (!target) return 0
   let start = 0
   for (const clip of clips) {
     if (clip.id === id) break
-    if (clip.track === target.track) start += clipDuration(clip)
+    if (sameSequence(clip.track, target.track)) start += clipDuration(clip)
   }
   return start
 }
