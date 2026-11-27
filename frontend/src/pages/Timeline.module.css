@@ -68,6 +68,8 @@
 .readinessPanel { display: grid; grid-template-columns: minmax(200px, 285px) 1fr; gap: 18px; margin-top: 12px; padding: 15px; border: 1px solid #82729d50; border-radius: 11px; background: linear-gradient(120deg, #24203c, #151b2c 70%); }
 .readinessPanel h2 { margin: 4px 0; font-size: 16px; }
 .readinessPanel p { margin: 0; color: #bcb7cc; font-size: 11px; line-height: 1.45; }
+.readinessPanel > div > button { margin-top: 10px; padding: 7px 9px; font-size: 11px; }
+.readinessPanel .handoffStatus { margin-top: 8px; color: #85e2df; }
 .readinessPanel ul { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
 .readinessPanel li { display: flex; align-items: flex-start; gap: 7px; min-width: 0; padding: 8px; border: 1px solid #77718b5c; border-radius: 7px; background: #20263a; }
 .readinessPanel li svg { flex: none; }

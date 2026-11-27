@@ -5,6 +5,10 @@ import { mediaKind } from '../features/media/types'
 import type { MediaAsset } from '../features/media/types'
 import { isTimelineClip } from '../features/timeline/editing'
 import type { TimelineClip } from '../features/timeline/editing'
+import { buildProcessingManifest } from '../features/timeline/processingHandoff'
+import type { ProcessingBundle } from '../features/timeline/processingHandoff'
+import { createBrowserMediaFileStore } from './mediaFileStore'
+import type { MediaFileStore } from './mediaFileStore'
 import { readMediaDetails } from './mediaMetadata'
 import type { ProjectRepository } from './projectRepository'
 
@@ -23,8 +27,10 @@ export interface WorkspaceRepository extends ProjectRepository {
   relinkMedia(id: string, file: File): Promise<MediaAsset>
   removeMedia(id: string): Promise<void>
   previewUrl(id: string): string | null
+  mediaStorageStatus(): 'browser' | 'session' | 'unavailable'
   listTimeline(projectId: string): Promise<TimelineClip[]>
   saveTimeline(projectId: string, clips: TimelineClip[]): Promise<TimelineClip[]>
+  prepareProcessingBundle(projectId: string): Promise<ProcessingBundle>
 }
 
 function initialState(): WorkspaceState {
@@ -80,9 +86,23 @@ function checkedName(name: string): string {
   return name.trim()
 }
 
-export function createLocalWorkspaceRepository(storage: Storage = window.localStorage): WorkspaceRepository {
+export function createLocalWorkspaceRepository(storage: Storage = window.localStorage, fileStore: MediaFileStore = createBrowserMediaFileStore()): WorkspaceRepository {
   let state = loadState(storage)
   const urls = new Map<string, string>()
+  let mediaStorageStatus: 'browser' | 'session' | 'unavailable' = fileStore.persistence
+  const ready = (async () => {
+    try {
+      await fileStore.ready()
+      for (const asset of state.media) {
+        const file = await fileStore.get(asset.id)
+        if (file && file.size === asset.sizeBytes) urls.set(asset.id, URL.createObjectURL(file))
+      }
+    } catch { mediaStorageStatus = 'unavailable' }
+  })()
+  const requireMediaStore = async () => {
+    await ready
+    if (mediaStorageStatus === 'unavailable') throw new Error('Browser media storage is unavailable. Check browser storage settings and try again.')
+  }
   const commit = (next: WorkspaceState) => {
     try { storage.setItem(STORAGE_KEY, JSON.stringify(next)) }
     catch { throw new Error('Browser storage could not save your changes. Check available storage and browser settings.') }
@@ -109,19 +129,23 @@ export function createLocalWorkspaceRepository(storage: Storage = window.localSt
       return copy(project)
     },
     async remove(id) {
+      await ready
       const project = state.projects.find((item) => item.id === id)
       if (!project) throw new Error('This project is no longer available.')
       if (project.source === 'sample') throw new Error('Sample projects cannot be removed.')
       const removed = state.media.filter((item) => item.projectId === id)
       commit({ ...state, projects: state.projects.filter((item) => item.id !== id), media: state.media.filter((item) => item.projectId !== id), timelines: Object.fromEntries(Object.entries(state.timelines).filter(([projectId]) => projectId !== id)) })
       removed.forEach((item) => { const url = urls.get(item.id); if (url) URL.revokeObjectURL(url); urls.delete(item.id) })
+      await Promise.allSettled(removed.map((item) => fileStore.remove(item.id)))
     },
     async listMedia(projectId) {
       if (!hasProject(projectId)) throw new Error('This project is no longer available.')
+      await ready
       return state.media.filter((item) => item.projectId === projectId).map(copy)
     },
     async importMedia(projectId, files) {
       if (!hasProject(projectId)) throw new Error('This project is no longer available.')
+      await requireMediaStore()
       const imported: MediaAsset[] = []
       const rejected: string[] = []
       for (const file of files) {
@@ -138,7 +162,10 @@ export function createLocalWorkspaceRepository(storage: Storage = window.localSt
             id: crypto.randomUUID(), projectId, name: file.name, kind, mimeType: file.type,
             sizeBytes: file.size, lastModified: file.lastModified, addedAt: new Date().toISOString(), ...details,
           }
-          commit({ ...state, media: [asset, ...state.media] })
+          try { await fileStore.put(asset.id, file) }
+          catch { throw new Error('Browser media storage could not save this file. Check available space and browser settings.') }
+          try { commit({ ...state, media: [asset, ...state.media] }) }
+          catch (cause) { await fileStore.remove(asset.id).catch(() => {}); throw cause }
           urls.set(asset.id, url)
           imported.push(copy(asset))
         } catch (error) {
@@ -149,30 +176,40 @@ export function createLocalWorkspaceRepository(storage: Storage = window.localSt
       return { imported, rejected }
     },
     async relinkMedia(id, file) {
+      await requireMediaStore()
       const asset = state.media.find((item) => item.id === id)
       if (!asset) throw new Error('This media item is no longer available.')
       if (file.name !== asset.name || file.size !== asset.sizeBytes || file.lastModified !== asset.lastModified || mediaKind(file) !== asset.kind) {
         throw new Error('Choose the original file with the same name, size, and modified date.')
       }
       const url = URL.createObjectURL(file)
-      const details = await readMediaDetails(url, asset.kind)
-      const updated = { ...asset, ...details }
-      try { commit({ ...state, media: state.media.map((item) => item.id === id ? updated : item) }) }
+      let details: Awaited<ReturnType<typeof readMediaDetails>>
+      try { details = await readMediaDetails(url, asset.kind) }
       catch (error) { URL.revokeObjectURL(url); throw error }
+      const updated = { ...asset, ...details }
+      try {
+        const previousFile = await fileStore.get(id)
+        await fileStore.put(id, file)
+        try { commit({ ...state, media: state.media.map((item) => item.id === id ? updated : item) }) }
+        catch (cause) { if (previousFile) await fileStore.put(id, previousFile).catch(() => {}); else await fileStore.remove(id).catch(() => {}); throw cause }
+      } catch (error) { URL.revokeObjectURL(url); throw error }
       const previous = urls.get(id)
       if (previous) URL.revokeObjectURL(previous)
       urls.set(id, url)
       return copy(updated)
     },
     async removeMedia(id) {
+      await ready
       if (!state.media.some((item) => item.id === id)) throw new Error('This media item is no longer available.')
       const timelines = Object.fromEntries(Object.entries(state.timelines).map(([projectId, clips]) => [projectId, clips.filter((clip) => clip.mediaId !== id)]))
       commit({ ...state, media: state.media.filter((item) => item.id !== id), timelines })
       const url = urls.get(id)
       if (url) URL.revokeObjectURL(url)
       urls.delete(id)
+      await fileStore.remove(id).catch(() => {})
     },
     previewUrl(id) { return urls.get(id) ?? null },
+    mediaStorageStatus() { return mediaStorageStatus },
     async listTimeline(projectId) {
       if (!hasProject(projectId)) throw new Error('This project is no longer available.')
       return (state.timelines[projectId] ?? []).map(copy)
@@ -193,6 +230,20 @@ export function createLocalWorkspaceRepository(storage: Storage = window.localSt
       const saved = clips.map(copy)
       commit({ ...state, timelines: { ...state.timelines, [projectId]: saved } })
       return saved.map(copy)
+    },
+    async prepareProcessingBundle(projectId) {
+      await requireMediaStore()
+      const project = state.projects.find((item) => item.id === projectId)
+      if (!project) throw new Error('This project is no longer available.')
+      const assets = state.media.filter((item) => item.projectId === projectId)
+      const manifest = buildProcessingManifest(project, assets, state.timelines[projectId] ?? [])
+      const files: ProcessingBundle['files'] = []
+      for (const media of manifest.media) {
+        const blob = await fileStore.get(media.id)
+        if (!blob || blob.size !== media.sizeBytes) throw new Error(`${media.name} needs relinking before processing.`)
+        files.push({ mediaId: media.id, blob })
+      }
+      return { manifest, files }
     },
   }
 }

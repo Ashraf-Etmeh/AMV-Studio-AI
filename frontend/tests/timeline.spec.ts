@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
-test('imported stills form a saved edit with trim, order, history, and relinking', async ({ page }) => {
+test('imported stills form a saved edit with trim, order, history, and retained previews', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   const sky = path.resolve('src/assets/demo/project-sky.png')
@@ -46,14 +46,6 @@ test('imported stills form a saved edit with trim, order, history, and relinking
   await expect(page.getByText('2 placed clips · sequential tracks')).toBeVisible()
   await page.getByRole('button', { name: 'Select project-sky.png clip on Still Images' }).click()
   await expect(page.getByText('Timeline start').locator('..')).toContainText('0:02.5')
-  await expect(page.getByText('File needs relinking')).toBeVisible()
-  await page.getByRole('button', { name: 'Open Media', exact: true }).click()
-  await page.getByRole('button', { name: /project-sky.png.*image/ }).click()
-  await page.getByRole('button', { name: 'Relink file' }).click()
-  await page.getByLabel('Choose original file to relink').setInputFiles(sky)
-  await expect(page.getByText('project-sky.png is available for preview in this session.')).toBeVisible()
-  await page.getByRole('button', { name: 'Timeline Editor' }).click()
-  await page.getByRole('button', { name: 'Select project-sky.png clip on Still Images' }).click()
   await expect(page.getByRole('img', { name: 'Preview of project-sky.png' })).toBeVisible()
   expect(errors).toEqual([])
 })
@@ -82,7 +74,7 @@ test('imported music can be placed and trimmed without analysis claims', async (
   await expect(page.getByText('Placed length').locator('..')).toContainText('0:02')
   await page.reload()
   await expect(page.getByText('Placed length').locator('..')).toContainText('0:02')
-  await expect(page.getByText('File needs relinking')).toBeVisible()
+  await expect(page.locator('audio[aria-label="Preview of song.wav"]')).toHaveAttribute('src', /^blob:/)
   await expect(page.getByText(/Rendering and file export are not implemented yet/)).toBeVisible()
 })
 
@@ -129,6 +121,11 @@ test('sequence monitor plays ordered pictures with imported music and checks rea
   await page.getByRole('button', { name: 'Source' }).click()
   await expect(monitor.getByRole('heading', { name: 'Source preview' })).toBeVisible()
   await page.reload()
-  await expect(page.getByText('Relink 3 source files in Media.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Play sequence' })).toBeDisabled()
+  await expect(page.getByText('The edit passes the available checks for a future renderer.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Play sequence' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Verify saved media package' }).click()
+  await expect(page.getByRole('status')).toContainText('3 saved source files')
+  await expect(page.getByRole('status')).toContainText('No file was rendered or uploaded.')
+  await page.setViewportSize({ width: 1672, height: 941 })
+  await page.screenshot({ path: 'test-results/handoff-1672x941.png', fullPage: true })
 })

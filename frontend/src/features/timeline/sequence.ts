@@ -60,7 +60,7 @@ export function exportReadiness(clips: TimelineClip[], assets: MediaAsset[], has
   const checks: ReadinessCheck[] = [
     { id: 'visual', label: 'Visual sequence', passed: durations.visual > 0, detail: durations.visual > 0 ? `${clips.filter((clip) => clip.track !== 'audio').length} placed video or still clips` : 'Place at least one video or still image.' },
     { id: 'music', label: 'Music track', passed: durations.audio > 0, detail: durations.audio > 0 ? `${clips.filter((clip) => clip.track === 'audio').length} placed music clips` : 'Place at least one music clip.' },
-    { id: 'access', label: 'Local file access', passed: clips.length > 0 && missing.length === 0, detail: missing.length ? `Relink ${missing.length} source ${missing.length === 1 ? 'file' : 'files'} in Media.` : clips.length ? 'All placed sources are available in this session.' : 'Place media to check file access.' },
+    { id: 'access', label: 'Local file access', passed: clips.length > 0 && missing.length === 0, detail: missing.length ? `Relink ${missing.length} source ${missing.length === 1 ? 'file' : 'files'} in Media.` : clips.length ? 'All placed sources are available.' : 'Place media to check file access.' },
     { id: 'timing', label: 'Full-length picture and sound', passed: durations.visual > 0 && durations.audio > 0 && drift < 0.1, detail: durations.visual && durations.audio ? drift < 0.1 ? 'Visual and music durations match.' : `Visual ${durations.visual.toFixed(1)}s · music ${durations.audio.toFixed(1)}s. Trim or extend clips to match.` : 'Add picture and music to compare durations.' },
   ]
   return { checks, ready: checks.every((check) => check.passed), canPreview: clips.length > 0 && missing.length === 0 }

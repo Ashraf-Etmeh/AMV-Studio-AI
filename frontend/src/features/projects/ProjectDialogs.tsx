@@ -41,7 +41,7 @@ export function ProjectNameDialog({ project, onSubmit, onClose }: NameDialogProp
           placeholder="e.g. Midnight Reverie" data-autofocus autoComplete="off" maxLength={80}
           aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} />
         {error && <p id={errorId} className={styles.error} role="alert">{error}</p>}
-        <div className={styles.sessionInfo}><FolderOpen size={19} /><p><strong>Saved in this browser</strong><span>{project?.source === 'sample' ? 'This is a sample project. ' : ''}Project names and media details persist here. Selected media files need relinking after a reload.</span></p></div>
+        <div className={styles.sessionInfo}><FolderOpen size={19} /><p><strong>Saved in this browser</strong><span>{project?.source === 'sample' ? 'This is a sample project. ' : ''}Project details persist here. New media imports are saved in this browser profile when storage is available.</span></p></div>
         <div className={styles.actions}><Button variant="quiet" onClick={onClose}>Cancel</Button><Button variant="primary" type="submit" disabled={saving}>{saving ? 'Saving…' : project ? 'Save name' : 'Create Project'}</Button></div>
       </form>
     </Modal>

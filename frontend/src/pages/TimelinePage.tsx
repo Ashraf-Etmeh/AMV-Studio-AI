@@ -31,6 +31,7 @@ export function TimelinePage({ projectId, repository, onHome, onProjects, onMedi
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [handoffStatus, setHandoffStatus] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sourceIn, setSourceIn] = useState('0')
   const [sourceOut, setSourceOut] = useState('0')
@@ -85,6 +86,7 @@ export function TimelinePage({ projectId, repository, onHome, onProjects, onMedi
     busyRef.current = true
     setBusy(true)
     setError(null)
+    setHandoffStatus(null)
     try {
       await repository.saveTimeline(projectId, next.present)
       historyRef.current = next
@@ -124,6 +126,20 @@ export function TimelinePage({ projectId, repository, onHome, onProjects, onMedi
     void persist(next, nextSelection)
   }
 
+  async function verifyHandoff() {
+    if (busyRef.current) return
+    busyRef.current = true
+    setBusy(true)
+    setError(null)
+    setHandoffStatus(null)
+    try {
+      const bundle = await repository.prepareProcessingBundle(projectId)
+      const bytes = bundle.files.reduce((total, file) => total + file.blob.size, 0)
+      setHandoffStatus(`Verified ${bundle.manifest.clips.length} clips and ${bundle.files.length} saved source files (${(bytes / 1024 / 1024).toFixed(1)} MB). No file was rendered or uploaded.`)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not verify saved media.') }
+    finally { busyRef.current = false; setBusy(false) }
+  }
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || (event.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName))) return
@@ -157,7 +173,7 @@ export function TimelinePage({ projectId, repository, onHome, onProjects, onMedi
       <div className={styles.heading}><div><span className={styles.eyebrow}>LOCAL PROJECT EDIT · {project.source === 'sample' ? 'REFERENCE PROJECT' : 'YOUR PROJECT'}</span><h1>{project.name}</h1><p>Arrange imported music, videos, and stills. Edits are saved in this browser.</p></div><Button onClick={onMedia}><Link2 size={17} /> Import or relink media</Button></div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.workbench}>
-        <aside className={styles.library} aria-label="Project media"><div className={styles.panelTitle}><h2>Media Library</h2><span>{assets.length} files</span></div><p className={styles.panelHint}>Add a file to its matching track. Video and music need a readable duration.</p>{assets.length ? <div className={styles.assetList}>{assets.map((asset) => { const Icon = asset.kind === 'audio' ? Music2 : asset.kind === 'video' ? Film : ImageIcon; const url = repository.previewUrl(asset.id); return <div className={styles.asset} key={asset.id}><div className={styles.assetThumb}>{asset.kind === 'image' && url ? <img src={url} alt="" /> : <Icon size={23} />}</div><div className={styles.assetName}><strong title={asset.name}>{asset.name}</strong><small>{asset.kind} · {asset.durationSeconds === null ? asset.kind === 'image' ? 'still' : 'duration unknown' : formatTimelineTime(asset.durationSeconds)}</small></div><button onClick={() => add(asset)} disabled={busy} aria-label={`Add ${asset.name} to timeline`} title="Add to timeline"><Plus size={20} /></button></div> })}</div> : <div className={styles.emptyLibrary}><Film size={32} /><strong>No imported media</strong><p>Choose files from your computer to begin a real edit.</p><Button variant="primary" onClick={onMedia}>Open Media Library</Button></div>}<div className={styles.libraryFooter}>Media bytes remain on your computer. Relink files in Media after a reload to preview them again.</div></aside>
+        <aside className={styles.library} aria-label="Project media"><div className={styles.panelTitle}><h2>Media Library</h2><span>{assets.length} files</span></div><p className={styles.panelHint}>Add a file to its matching track. Video and music need a readable duration.</p>{assets.length ? <div className={styles.assetList}>{assets.map((asset) => { const Icon = asset.kind === 'audio' ? Music2 : asset.kind === 'video' ? Film : ImageIcon; const url = repository.previewUrl(asset.id); return <div className={styles.asset} key={asset.id}><div className={styles.assetThumb}>{asset.kind === 'image' && url ? <img src={url} alt="" /> : <Icon size={23} />}</div><div className={styles.assetName}><strong title={asset.name}>{asset.name}</strong><small>{asset.kind} · {asset.durationSeconds === null ? asset.kind === 'image' ? 'still' : 'duration unknown' : formatTimelineTime(asset.durationSeconds)}</small></div><button onClick={() => add(asset)} disabled={busy} aria-label={`Add ${asset.name} to timeline`} title="Add to timeline"><Plus size={20} /></button></div> })}</div> : <div className={styles.emptyLibrary}><Film size={32} /><strong>No imported media</strong><p>Choose files from your computer to begin a real edit.</p><Button variant="primary" onClick={onMedia}>Open Media Library</Button></div>}<div className={styles.libraryFooter}>{repository.mediaStorageStatus() === 'browser' ? 'Imported media copies are saved in this browser profile. Older records without saved files still need relinking.' : 'This browser cannot retain media files; relink them in Media after a reload.'}</div></aside>
         <section className={styles.previewPanel} aria-label="Project preview">
           <div className={styles.panelTitle}><h2>{previewMode === 'sequence' ? 'Sequence monitor' : 'Source preview'}</h2><div className={styles.previewTabs} role="group" aria-label="Preview mode"><button className={previewMode === 'sequence' ? styles.previewTabActive : ''} aria-pressed={previewMode === 'sequence'} onClick={() => setPreviewMode('sequence')}>Sequence</button><button className={previewMode === 'source' ? styles.previewTabActive : ''} aria-pressed={previewMode === 'source'} onClick={() => { playback.pause(); setPreviewMode('source') }}>Source</button></div></div>
           <div className={styles.previewStage}>{previewMode === 'sequence' ? <SequenceMonitor frame={frame} playing={playback.playing} repository={repository} onMedia={onMedia} onBlocked={() => { playback.pause(); setError('Playback could not start in this browser. Check the source files and try again.') }} /> : selected && selectedAsset ? previewUrl ? selectedAsset.kind === 'image' ? <img src={previewUrl} alt={`Preview of ${selectedAsset.name}`} /> : selectedAsset.kind === 'video' ? <video key={selected.id} ref={previewRef as React.RefObject<HTMLVideoElement>} src={previewUrl} controls preload="metadata" aria-label={`Preview of ${selectedAsset.name}`} onLoadedMetadata={seekToIn} onPlay={() => { if (previewRef.current && (previewRef.current.currentTime < selected.sourceIn || previewRef.current.currentTime >= selected.sourceOut)) seekToIn() }} onTimeUpdate={stopAtOut} /> : <div className={styles.audioPreview}><Music2 size={56} /><audio key={selected.id} ref={previewRef as React.RefObject<HTMLAudioElement>} src={previewUrl} controls preload="metadata" aria-label={`Preview of ${selectedAsset.name}`} onLoadedMetadata={seekToIn} onPlay={() => { if (previewRef.current && (previewRef.current.currentTime < selected.sourceIn || previewRef.current.currentTime >= selected.sourceOut)) seekToIn() }} onTimeUpdate={stopAtOut} /></div> : <div className={styles.previewEmpty}><Link2 size={39} /><strong>File needs relinking</strong><p>The timeline edit is saved. Relink the original file in Media to preview this clip.</p><Button onClick={onMedia}>Open Media</Button></div> : <div className={styles.previewEmpty}><Clapperboard size={42} /><strong>Select a timeline clip</strong><p>Add a project file, then select its clip to preview and trim it.</p></div>}</div>
@@ -180,7 +196,7 @@ export function TimelinePage({ projectId, repository, onHome, onProjects, onMedi
           </div> : <div className={styles.inspectorEmpty}><p>Select a clip on a track to edit its source range, change order, or remove it.</p></div>}
         </aside>
       </div>
-      <section className={styles.readinessPanel} aria-labelledby="readiness-heading"><div><span className={styles.eyebrow}>PRE-RENDER CHECK</span><h2 id="readiness-heading">Export readiness</h2><p>{readiness.ready ? 'The edit passes the available checks for a future renderer.' : 'Resolve these items before this edit could be rendered.'} Rendering and file export are not implemented yet.</p></div><ul>{readiness.checks.map((check) => <li key={check.id} className={check.passed ? styles.checkPassed : styles.checkBlocked}>{check.passed ? <CheckCircle2 size={17} /> : <XCircle size={17} />}<span><strong>{check.label}</strong><small>{check.detail}</small></span></li>)}</ul></section>
+      <section className={styles.readinessPanel} aria-labelledby="readiness-heading"><div><span className={styles.eyebrow}>PRE-RENDER CHECK</span><h2 id="readiness-heading">Export readiness</h2><p>{readiness.ready ? 'The edit passes the available checks for a future renderer.' : 'Resolve these items before this edit could be rendered.'} Rendering and file export are not implemented yet.</p><Button onClick={() => void verifyHandoff()} disabled={!readiness.ready || busy}>Verify saved media package</Button>{handoffStatus && <p className={styles.handoffStatus} role="status">{handoffStatus}</p>}</div><ul>{readiness.checks.map((check) => <li key={check.id} className={check.passed ? styles.checkPassed : styles.checkBlocked}>{check.passed ? <CheckCircle2 size={17} /> : <XCircle size={17} />}<span><strong>{check.label}</strong><small>{check.detail}</small></span></li>)}</ul></section>
       <section className={styles.timelinePanel} aria-labelledby="tracks-heading">
         <div className={styles.timelineToolbar}>
           <div><h2 id="tracks-heading">Timeline</h2><span>{clips.length} placed clips · sequential tracks</span></div>

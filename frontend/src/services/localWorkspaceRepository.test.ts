@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createLocalWorkspaceRepository } from './localWorkspaceRepository'
 import { readMediaDetails } from './mediaMetadata'
+import { createSessionMediaFileStore } from './mediaFileStore'
+import { processingFormData } from '../features/timeline/processingHandoff'
 
 vi.mock('./mediaMetadata', () => ({ readMediaDetails: vi.fn() }))
 
@@ -46,7 +48,7 @@ describe('browser-local workspace repository', () => {
     expect(second.previewUrl(imported[0].id)).toBe('blob:test')
   })
 
-  it('does not store file bytes, rejects duplicates and unsupported files', async () => {
+  it('keeps file bytes out of metadata and rejects duplicates and unsupported files', async () => {
     const storage = new MemoryStorage()
     const repository = createLocalWorkspaceRepository(storage)
     const project = await repository.create('Scene set')
@@ -105,5 +107,40 @@ describe('browser-local workspace repository', () => {
     await repository.saveTimeline(project.id, [{ id: 'clip', mediaId: imported[0].id, track: 'image', sourceIn: 0, sourceOut: 5 }])
     await repository.remove(project.id)
     expect(JSON.parse(storage.getItem('amv-studio-ai:workspace:v1')!).timelines[project.id]).toBeUndefined()
+  })
+
+  it('restores retained file bytes and prepares a validated processing handoff', async () => {
+    const storage = new MemoryStorage()
+    const files = createSessionMediaFileStore()
+    vi.mocked(readMediaDetails).mockImplementation(async (_url, kind) => ({ durationSeconds: kind === 'audio' ? 5 : null, width: null, height: null }))
+    const first = createLocalWorkspaceRepository(storage, files)
+    const project = await first.create('Durable cut')
+    const { imported } = await first.importMedia(project.id, [new File(['pixels'], 'frame.png', { type: 'image/png' }), new File(['music'], 'song.wav', { type: 'audio/wav' })])
+    const image = imported.find((asset) => asset.kind === 'image')!
+    const audio = imported.find((asset) => asset.kind === 'audio')!
+    await first.saveTimeline(project.id, [{ id: 'image-clip', mediaId: image.id, track: 'image', sourceIn: 0, sourceOut: 5 }, { id: 'audio-clip', mediaId: audio.id, track: 'audio', sourceIn: 0, sourceOut: 5 }])
+    const second = createLocalWorkspaceRepository(storage, files)
+    await second.listMedia(project.id)
+    expect(second.previewUrl(image.id)).toBe('blob:test')
+    const bundle = await second.prepareProcessingBundle(project.id)
+    expect(bundle.manifest).toMatchObject({ schemaVersion: 1, visualDurationSeconds: 5, audioDurationSeconds: 5, clips: [{ sequenceStart: 0 }, { sequenceStart: 0 }] })
+    expect(bundle.files.map((file) => file.blob.size)).toEqual([6, 5])
+    expect(processingFormData(bundle).getAll('media')).toHaveLength(2)
+    await files.put(audio.id, new Blob(['bad']))
+    await expect(second.prepareProcessingBundle(project.id)).rejects.toThrow('song.wav needs relinking')
+    await files.put(audio.id, bundle.files.find((file) => file.mediaId === audio.id)!.blob)
+    await second.removeMedia(image.id)
+    expect(await files.get(image.id)).toBeNull()
+    await expect(second.prepareProcessingBundle(project.id)).rejects.toThrow('Place at least one video or still image')
+  })
+
+  it('does not create a media record when file storage fails', async () => {
+    const storage = new MemoryStorage()
+    const files = createSessionMediaFileStore()
+    files.put = async () => { throw new Error('quota') }
+    const repository = createLocalWorkspaceRepository(storage, files)
+    const project = await repository.create('No space')
+    await expect(repository.importMedia(project.id, [new File(['data'], 'shot.png', { type: 'image/png' })])).rejects.toThrow('could not save this file')
+    expect(await repository.listMedia(project.id)).toEqual([])
   })
 })
